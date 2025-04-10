@@ -2,7 +2,7 @@
 #define CREDENTIALS_H
 
 // Enter your WiFi password here.
-static const char* WIFI_PASSWORD = "WIFI_PW_HERE";
-static const char* WIFI_SSID = "WIFI_SSID_HERE";
+static const char* WIFI_PASSWORD = "AMeeZu5o?wifi";
+static const char* WIFI_SSID = "Perseverance";
 
 #endif // CREDENTIALS_H
