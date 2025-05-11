@@ -67,7 +67,7 @@ void loop() {
   handleWebRequests();
 
   static unsigned long lastTimeCheck = 0;
-  static unsigned long lastSlotMachineRun = 0;
+  static int lastSlotTriggerMinute = -1;
 
   unsigned long now = millis();
 
@@ -78,18 +78,21 @@ void loop() {
     String currentTime = getFormattedTime();
     Serial.println("Current time: " + currentTime);
 
-    // Parse the HHMMSS as a number to display
     int h, m, s;
     if (sscanf(currentTime.c_str(), "%d:%d:%d", &h, &m, &s) == 3) {
       uint32_t compactTime = h * 10000 + m * 100 + s;
       nixieDisplay.showNumber(compactTime);
+
+      // Run slot machine once at exact 5-minute marks (e.g., 10:05:00)
+      if (m % 5 == 0 && s == 0 && m != lastSlotTriggerMinute) {
+        nixieDisplay.runSlotMachine();
+        lastSlotTriggerMinute = m;
+      } else if (s != 0) {
+        // Reset trigger minute when we're out of the trigger second
+        lastSlotTriggerMinute = -1;
+      }
     }
   }
-
-  // Run slot machine every 5 minutes
-//   if (m%5==4) { // 300,000 ms = 5 minutes
-//     nixieDisplay.runSlotMachine();
-//   }
 
   delay(10);
 }
