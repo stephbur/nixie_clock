@@ -50,6 +50,8 @@ void loop() {
     handleWebRequests();
 
     static unsigned long lastTimeCheck = 0;
+    static bool prevButton1 = isButtonPressed(BUTTON1_PIN);
+    static bool prevButton3 = isButtonPressed(BUTTON3_PIN);
     unsigned long now = millis();
 
     if (now - lastTimeCheck >= 1000) {
@@ -60,6 +62,21 @@ void loop() {
 
         updateDisplayManager(currentTime);
 
+        bool currButton1 = isButtonPressed(BUTTON1_PIN);
+        bool currButton3 = isButtonPressed(BUTTON3_PIN);
+        Serial.printf("B1 prev=%d curr=%d | B3 prev=%d curr=%d\n", prevButton1, currButton1, prevButton3, currButton3);
+
+        if (currButton1 && !prevButton1) {
+            Serial.println("✔ Button 1: Triggering sensor display");
+            triggerSensorDisplay();
+        }
+        if (currButton3 && !prevButton3) {
+            Serial.println("✔ Button 3: Triggering slot machine");
+            triggerSlotMachine();
+        }
+
+        prevButton1 = currButton1;
+        prevButton3 = currButton3;
         if (!isDisplayOverrideActive()) {
             int h, m, s;
             if (sscanf(currentTime.c_str(), "%d:%d:%d", &h, &m, &s) == 3) {
