@@ -20,11 +20,18 @@ void triggerSensorDisplay() {
     overridePhase = 1;
 
     SensorData data = readSensors();
-    int temp = round(data.temperatureAHT);
-    int humi = round(data.humidity);
-    uint32_t displayVal = temp * 10000 + 0 * 100 + humi; // TT:xx:HH
-    nixie->showNumber(displayVal);
+    int temp = round(data.temperatureAHT);  // e.g. 23
+    int humi = round(data.humidity);        // e.g. 56
+
+    nixie->disableAllSegments();
+
+    nixie->enableSegment(hourTens[temp/10]);
+    nixie->enableSegment(hourUnits[temp%10]);
+    nixie->enableSegment(secondTens[humi/10]);
+    nixie->enableSegment(secondUnits[humi%10]);
+    nixie->updateDisplay();
 }
+
 
 void triggerSlotMachine() {
     if (!nixie || runningSlotMachine) return;
@@ -47,17 +54,21 @@ void updateDisplayManager(const String& currentTime) {
         triggerSensorDisplay();
     }
 
-    // Sensor display phases
     if (overridePhase == 1 && now - overrideStart >= 3000) {
         overridePhase = 2;
         SensorData data = readSensors();
-        int pres = round(data.pressure);
-        int pres_hi = pres / 100;
-        int pres_lo = pres % 100;
-        uint32_t displayVal = 0 * 10000 + pres_hi * 100 + pres_lo; // xx:xp:pp
-        nixie->showNumber(displayVal);
+        int pres   = round(data.pressure);     // e.g. 1013
+        int hi     = pres / 100;               // e.g. 10
+        int lo     = pres % 100;               // e.g. 13
+
+        nixie->disableAllSegments();
+        nixie->enableSegment(minuteUnits[hi%10]);
+        nixie->enableSegment(secondTens[lo/10]);
+        nixie->enableSegment(secondUnits[lo%10]);
+        nixie->updateDisplay();
+
     } else if (overridePhase == 2 && now - overrideStart >= 6000) {
-        overridePhase = 0;
+            overridePhase = 0;
     }
 
     // Scheduled slot machine effect
