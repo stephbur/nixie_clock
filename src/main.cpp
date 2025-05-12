@@ -49,7 +49,7 @@ void setup() {
 void loop() {
     ArduinoOTA.handle();
     handleWebRequests();
-
+    updateButtons();
     static unsigned long lastTimeCheck = 0;
     static bool prevButton1       = isButtonPressed(BUTTON1_PIN);
     static bool prevButton3       = isButtonPressed(BUTTON3_PIN);
