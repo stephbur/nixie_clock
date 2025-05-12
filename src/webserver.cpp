@@ -10,7 +10,7 @@
 WebServer server(80);
 
 extern NixieDisplay nixieDisplay;
-
+bool clockUpdateEnabled = true;
 
 // ---------------------------------------------------------------------
 // Returns inline CSS for a dark theme, glowing orange text, larger fonts,
@@ -127,7 +127,24 @@ void handleDebug() {
             "<button onclick='setDisplayNumber()'>Set Number</button>"
           "</p>";
   html += "<p id='setNumberMsg'></p>";
-  
+  html += "<h2>Clock Auto-Update</h2>";
+  html += "<p><button id='clockBtn' class='" + String(clockUpdateEnabled ? "on" : "off") +
+          "' onclick='toggleClock()'>" +
+          (clockUpdateEnabled ? "Disable" : "Enable") + " Clock</button></p>";  
+  html += "<script>"
+          "function toggleClock() {"
+          "let want = document.getElementById('clockBtn').innerText === 'Enable' ? 'true' : 'false';"
+          "fetch('/autoupdate?enable=' + want)"
+          ".then(r=>r.text())"
+          ".then(state=>{"
+              "let btn = document.getElementById('clockBtn');"
+              "let en = (state==='ENABLED');"
+              "btn.innerText = en?'Disable':'Enable';"
+              "btn.classList.toggle('on', en);"
+              "btn.classList.toggle('off', !en);"
+          "});"
+          "}"
+      "</script>";
   // Navigation: Return to Home button.
   html += "<p><a class='button' href='/'>Return to Home</a></p>";
   
@@ -165,6 +182,16 @@ void handleSetNumber() {
   }
 }
 
+// AJAX Endpoint: Enable or disable automatic clock updates
+void handleAutoUpdate() {
+  if (server.hasArg("enable")) {
+    clockUpdateEnabled = (server.arg("enable") == "true");
+    server.send(200, "text/plain", clockUpdateEnabled ? "ENABLED" : "DISABLED");
+  } else {
+    server.send(400, "text/plain", "Bad Request");
+  }
+}
+
 // ---------------------------------------------------------------------
 // Initialize the web server: set routes and start the server.
 void initWebServer() {
@@ -172,6 +199,7 @@ void initWebServer() {
   server.on("/debug", handleDebug);
   server.on("/toggle", handleToggle);
   server.on("/setnumber", handleSetNumber);
+  server.on("/autoupdate", handleAutoUpdate);
   
   server.begin();
   Serial.println("Web server started");

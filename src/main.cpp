@@ -16,6 +16,7 @@
 
 
 NixieDisplay nixieDisplay;
+extern bool clockUpdateEnabled;
 
 void setup() {
   Serial.begin(115200);
@@ -50,9 +51,9 @@ void loop() {
     handleWebRequests();
 
     static unsigned long lastTimeCheck = 0;
-    static bool prevButton1 = isButtonPressed(BUTTON1_PIN);
-    static bool prevButton3 = isButtonPressed(BUTTON3_PIN);
-    unsigned long now = millis();
+    static bool prevButton1       = isButtonPressed(BUTTON1_PIN);
+    static bool prevButton3       = isButtonPressed(BUTTON3_PIN);
+    unsigned long now             = millis();
 
     if (now - lastTimeCheck >= 1000) {
         lastTimeCheck = now;
@@ -60,12 +61,21 @@ void loop() {
         String currentTime = getFormattedTime();
         Serial.println("Current time: " + currentTime);
 
-        updateDisplayManager(currentTime);
+        // Only run scheduled updates if auto‐update is enabled
+        if (clockUpdateEnabled) {
+            updateDisplayManager(currentTime);
+        }
 
+        // Read buttons
         bool currButton1 = isButtonPressed(BUTTON1_PIN);
         bool currButton3 = isButtonPressed(BUTTON3_PIN);
-        Serial.printf("B1 prev=%d curr=%d | B3 prev=%d curr=%d\n", prevButton1, currButton1, prevButton3, currButton3);
+        Serial.printf(
+          "B1 prev=%d curr=%d | B3 prev=%d curr=%d\n",
+          prevButton1, currButton1,
+          prevButton3, currButton3
+        );
 
+        // Manual triggers always allowed
         if (currButton1 && !prevButton1) {
             Serial.println("✔ Button 1: Triggering sensor display");
             triggerSensorDisplay();
@@ -77,7 +87,9 @@ void loop() {
 
         prevButton1 = currButton1;
         prevButton3 = currButton3;
-        if (!isDisplayOverrideActive()) {
+
+        // Show the time on the nixie only if no override is active and auto-update is on
+        if (clockUpdateEnabled && !isDisplayOverrideActive()) {
             int h, m, s;
             if (sscanf(currentTime.c_str(), "%d:%d:%d", &h, &m, &s) == 3) {
                 uint32_t compactTime = h * 10000 + m * 100 + s;
