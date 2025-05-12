@@ -23,6 +23,7 @@ class NixieDisplay {
     void disableSegment(byte segment);
     void updateDisplay();
     void runSlotMachine();
+    void runSlotMachineWavy();
     // Test function: display a 6-digit number (e.g. HHMMSS)
     void showNumber(uint32_t number);
     // Test function: force display of digit "5" on all tubes.

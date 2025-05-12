@@ -72,10 +72,28 @@ void NixieDisplay::runSlotMachine() {
       enableSegment(secondTens[i]);
       enableSegment(secondUnits[i]);
       updateDisplay();
-      delay(100);  // Keep the display on for 100 ms per frame (this remains unchanged)
+      delay(120);  // Keep the display on for 100 ms per frame (this remains unchanged)
     }
   }
 }
+
+// does not produce desired effect yet, maybe too fast?
+void NixieDisplay::runSlotMachineWavy() {
+
+    const byte* maps[6] = { hourTens, hourUnits, minuteTens, minuteUnits, secondTens, secondUnits };
+    for (int cycle = 0; cycle < 5; ++cycle) {
+        for (int i = 0; i < 10; ++i) {
+            disableAllSegments();
+            for (int pos = 0; pos < 6; ++pos) {
+                int d = (i + pos) % 10;
+                enableSegment(maps[pos][d]);
+            }
+            updateDisplay();
+            delay(100);
+        }
+    }
+}
+
 
 // The test function that converts a 6-digit number (e.g. HHMMSS) to display.
 // The mapping is identical to your working project.
