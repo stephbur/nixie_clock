@@ -115,6 +115,5 @@ void NixieDisplay::showNumber(uint32_t number) {
   enableSegment(secondTens[second / 10]);
   enableSegment(secondUnits[second % 10]);
   
-  updateDisplay();
 }
 

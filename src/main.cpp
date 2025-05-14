@@ -69,19 +69,12 @@ void loop() {
         // Read buttons
         bool currButton1 = isButtonPressed(BUTTON1_PIN);
         bool currButton3 = isButtonPressed(BUTTON3_PIN);
-        Serial.printf(
-          "B1 prev=%d curr=%d | B3 prev=%d curr=%d\n",
-          prevButton1, currButton1,
-          prevButton3, currButton3
-        );
 
         // Manual triggers always allowed
         if (currButton1 && !prevButton1) {
-            Serial.println("✔ Button 1: Triggering sensor display");
             triggerSensorDisplay();
         }
         if (currButton3 && !prevButton3) {
-            Serial.println("✔ Button 3: Triggering slot machine");
             triggerSlotMachine();
         }
 
@@ -94,6 +87,14 @@ void loop() {
             if (sscanf(currentTime.c_str(), "%d:%d:%d", &h, &m, &s) == 3) {
                 uint32_t compactTime = h * 10000 + m * 100 + s;
                 nixieDisplay.showNumber(compactTime);
+                if (s % 2 == 0) {
+                  nixieDisplay.disableSegment(leftDot);
+                  nixieDisplay.disableSegment(rightDot);
+                } else {
+                  nixieDisplay.enableSegment(leftDot);
+                  nixieDisplay.enableSegment(rightDot);
+                }
+                nixieDisplay.updateDisplay();
             }
         }
     }

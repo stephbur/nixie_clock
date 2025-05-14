@@ -176,6 +176,7 @@ void handleSetNumber() {
   if (server.hasArg("number")) {
     uint32_t number = server.arg("number").toInt();
     nixieDisplay.showNumber(number);
+    nixieDisplay.updateDisplay();
     server.send(200, "text/plain", "Display updated with number: " + String(number));
   } else {
     server.send(400, "text/plain", "Bad Request");
