@@ -11,6 +11,9 @@ WebServer server(80);
 
 extern NixieDisplay nixieDisplay;
 bool clockUpdateEnabled = true;
+bool leftDotEnabled  = false;
+bool rightDotEnabled = false;
+
 
 // ---------------------------------------------------------------------
 // Returns inline CSS for a dark theme, glowing orange text, larger fonts,
@@ -62,92 +65,108 @@ void handleRoot() {
 // Debug Page: Contains controls for toggling GPIO outputs,
 // shows the physical button status, and provides an input for setting the display number.
 void handleDebug() {
+  // Start HTML + head
   String html = "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Debug Tools</title>";
   html += getCSS();
-  
-  // JavaScript for AJAX operations.
+
+  // Single <script> block with ALL of our AJAX functions:
   html += "<script>"
-    "function toggleGPIO(btn, pin) {"
-      "let currentState = btn.getAttribute('data-state');"
-      "let newState = (currentState === 'HIGH') ? 'LOW' : 'HIGH';"
-      "fetch('/toggle?pin=' + pin + '&state=' + newState)"
-      ".then(response => response.text())"
-      ".then(state => {"
-         // Update button label to always display two lines.
-         "btn.innerHTML = 'GPIO ' + pin + ' (' + state + ')<br>' + btn.getAttribute('data-pinname');"
-         "btn.setAttribute('data-state', state);"
-         "if (state === 'HIGH') { btn.classList.remove('off'); btn.classList.add('on'); }"
-         "else { btn.classList.remove('on'); btn.classList.add('off'); }"
-      "});"
-    "}"
-    "function setDisplayNumber() {"
-      "let num = document.getElementById('numInput').value;"
-      "fetch('/setnumber?number=' + num)"
-      ".then(response => response.text())"
-      ".then(msg => { document.getElementById('setNumberMsg').innerText = msg; });"
-    "}"
-    "</script>";
-    
+            // 1) Toggle a GPIO pin
+            "function toggleGPIO(btn, pin) {"
+              "let curr = btn.getAttribute('data-state');"
+              "let nxt  = (curr === 'HIGH') ? 'LOW' : 'HIGH';"
+              "fetch('/toggle?pin='+pin+'&state='+nxt)"
+                ".then(r=>r.text())"
+                ".then(state=>{"
+                  "btn.innerHTML = 'GPIO '+pin+' ('+state+')<br>'+btn.getAttribute('data-pinname');"
+                  "btn.setAttribute('data-state', state);"
+                  "btn.classList.toggle('on',  state==='HIGH');"
+                  "btn.classList.toggle('off', state==='LOW');"
+                "});"
+            "}"
+            // 2) Set a manual display number
+            "function setDisplayNumber() {"
+              "let num = document.getElementById('numInput').value;"
+              "fetch('/setnumber?number='+num)"
+                ".then(r=>r.text())"
+                ".then(msg=>{ document.getElementById('setNumberMsg').innerText = msg; });"
+            "}"
+            // 3) Toggle the left/right dots
+            "function toggleDot(btn, which) {"
+              "let curr = btn.getAttribute('data-state');"
+              "let nxt  = (curr === 'ON') ? 'OFF' : 'ON';"
+              "fetch('/toggleDot?which='+which+'&state='+nxt)"
+                ".then(r=>r.text())"
+                ".then(state=>{"
+                  "btn.setAttribute('data-state', state);"
+                  "btn.innerText = (which==='left'?'Left Dot ':'Right Dot ')+ '('+state+')';"
+                  "btn.classList.toggle('on',  state==='ON');"
+                  "btn.classList.toggle('off', state==='OFF');"
+                "});"
+            "}"
+            // 4) Enable/disable auto‐update
+            "function toggleClock() {"
+              "let want = document.getElementById('clockBtn').innerText==='Enable'?'true':'false';"
+              "fetch('/autoupdate?enable='+want)"
+                ".then(r=>r.text())"
+                ".then(state=>{"
+                  "let btn = document.getElementById('clockBtn');"
+                  "let en  = (state==='ENABLED');"
+                  "btn.innerText = en?'Disable':'Enable';"
+                  "btn.classList.toggle('on',  en);"
+                  "btn.classList.toggle('off', !en);"
+                "});"
+            "}"
+          "</script>";
+
+  // Close head, open body
   html += "</head><body><div class='container'>";
   html += "<h1>Debug Tools</h1>";
-  
-  // Section: Toggling GPIO Outputs.
-  html += "<h2>Toggle GPIO Outputs</h2>";
-  html += "<div class='gpio-container'>";
-  // Define GPIO pins and friendly names.
-  int togglePins[] = { SR_CLK_PIN, SR_DIN_PIN, SR_LE_PIN, HV_ENABLE_PIN };
+
+  // --- GPIO toggle section (unchanged) ---
+  html += "<h2>Toggle GPIO Outputs</h2><div class='gpio-container'>";
+  int togglePins[]  = { SR_CLK_PIN, SR_DIN_PIN, SR_LE_PIN, HV_ENABLE_PIN };
   String toggleNames[] = { "CLK", "DIN", "LE", "HVEN" };
-  
   for (int i = 0; i < 4; i++) {
     int pin = togglePins[i];
     pinMode(pin, OUTPUT);
-    int currentState = digitalRead(pin);
-    String stateStr = (currentState == HIGH) ? "HIGH" : "LOW";
-    String btnClass = (currentState == HIGH) ? "on" : "off";
-    // The button label always shows two lines:
-    // First line: "GPIO X (STATE)"
-    // Second line: Friendly pin name.
-    String label = "GPIO " + String(pin) + " (" + stateStr + ")<br>" + toggleNames[i];
-    html += "<button data-state='" + stateStr + "' data-pinname='" + toggleNames[i] + "' class='" + btnClass + "' onclick='toggleGPIO(this," + String(pin) + ")'>" + label + "</button>";
+    String st  = (digitalRead(pin)==HIGH) ? "HIGH" : "LOW";
+    String cls = (st=="HIGH") ? "on" : "off";
+    html += "<button data-state='" + st + "' data-pinname='" + toggleNames[i] +
+            "' class='" + cls + "' onclick='toggleGPIO(this," + String(pin) + ")'>"
+            "GPIO " + String(pin) + " (" + st + ")<br>" + toggleNames[i] + "</button>";
   }
   html += "</div>";
-  
-  // Section: Physical Button Status.
-  html += "<h2>Physical Button Status</h2>";
-  html += "<p>"
-            "Button 1 (GPIO " + String(BUTTON1_PIN) + "): " + (isButtonPressed(BUTTON1_PIN) ? "Pressed" : "Released") + "<br>"
-            "Button 2 (GPIO " + String(BUTTON2_PIN) + "): " + (isButtonPressed(BUTTON2_PIN) ? "Pressed" : "Released") + "<br>"
-            "Button 3 (GPIO " + String(BUTTON3_PIN) + "): " + (isButtonPressed(BUTTON3_PIN) ? "Pressed" : "Released") +
-          "</p>";
-  
-  // Section: Set Display Number.
-  html += "<h2>Set Display Number</h2>";
-  html += "<p>"
-            "<input id='numInput' type='text' maxlength='6' pattern='[0-9]{1,6}' placeholder='Enter 6-digit number'> "
-            "<button onclick='setDisplayNumber()'>Set Number</button>"
-          "</p>";
-  html += "<p id='setNumberMsg'></p>";
-  html += "<h2>Clock Auto-Update</h2>";
-  html += "<p><button id='clockBtn' class='" + String(clockUpdateEnabled ? "on" : "off") +
-          "' onclick='toggleClock()'>" +
-          (clockUpdateEnabled ? "Disable" : "Enable") + " Clock</button></p>";  
-  html += "<script>"
-          "function toggleClock() {"
-          "let want = document.getElementById('clockBtn').innerText === 'Enable' ? 'true' : 'false';"
-          "fetch('/autoupdate?enable=' + want)"
-          ".then(r=>r.text())"
-          ".then(state=>{"
-              "let btn = document.getElementById('clockBtn');"
-              "let en = (state==='ENABLED');"
-              "btn.innerText = en?'Disable':'Enable';"
-              "btn.classList.toggle('on', en);"
-              "btn.classList.toggle('off', !en);"
-          "});"
-          "}"
-      "</script>";
-  // Navigation: Return to Home button.
-  html += "<p><a class='button' href='/'>Return to Home</a></p>";
-  
+
+  // --- Dot Control section ---
+  html += "<h2>Dot Control</h2><div class='gpio-container'>";
+    html += "<button id='leftDotBtn' data-state='"  + String(leftDotEnabled  ? "ON":"OFF") +
+            "' class='" + String(leftDotEnabled  ? "on":"off") +
+            "' onclick=\"toggleDot(this,'left')\">Left Dot (" +
+            String(leftDotEnabled  ? "ON":"OFF") + ")</button>";
+    html += "<button id='rightDotBtn' data-state='" + String(rightDotEnabled ? "ON":"OFF") +
+            "' class='" + String(rightDotEnabled ? "on":"off") +
+            "' onclick=\"toggleDot(this,'right')\">Right Dot (" +
+            String(rightDotEnabled ? "ON":"OFF") + ")</button>";
+  html += "</div>";
+
+  // --- Rest of Debug page (buttons, sensor readouts, etc.) ---
+  html += "<h2>Physical Button Status</h2><p>"
+          "Button 1 (GPIO " + String(BUTTON1_PIN) + "): " + (isButtonPressed(BUTTON1_PIN) ? "Pressed" : "Released") + "<br>"
+          "Button 2 (GPIO " + String(BUTTON2_PIN) + "): " + (isButtonPressed(BUTTON2_PIN) ? "Pressed" : "Released") + "<br>"
+          "Button 3 (GPIO " + String(BUTTON3_PIN) + "): " + (isButtonPressed(BUTTON3_PIN) ? "Pressed" : "Released") +
+        "</p>"
+        "<h2>Set Display Number</h2><p>"
+          "<input id='numInput' type='text' maxlength='6' pattern='[0-9]{1,6}' placeholder='Enter number'> "
+          "<button onclick='setDisplayNumber()'>Set Number</button>"
+        "</p><p id='setNumberMsg'></p>"
+        "<h2>Clock Auto-Update</h2><p>"
+          "<button id='clockBtn' class='" + String(clockUpdateEnabled ? "on":"off") +
+          "' onclick='toggleClock()'>" + (clockUpdateEnabled ? "Disable":"Enable") + " Clock</button>"
+        "</p>"
+        "<p><a class='button' href='/'>Return to Home</a></p>";
+
+  // Finish and send
   html += "</div></body></html>";
   server.send(200, "text/html", html);
 }
@@ -165,6 +184,30 @@ void handleToggle() {
     int newState = digitalRead(pin);
     String response = (newState == HIGH) ? "HIGH" : "LOW";
     server.send(200, "text/plain", response);
+  } else {
+    server.send(400, "text/plain", "Bad Request");
+  }
+}
+
+// new AJAX handler to flip individual dots
+void handleToggleDot() {
+  if (server.hasArg("which") && server.hasArg("state")) {
+    String which = server.arg("which");
+    bool   on    = (server.arg("state") == "ON");
+
+    if (which == "left") {
+      leftDotEnabled = on;
+      if (on)  nixieDisplay.enableSegment(leftDot);
+      else     nixieDisplay.disableSegment(leftDot);
+    }
+    else if (which == "right") {
+      rightDotEnabled = on;
+      if (on)  nixieDisplay.enableSegment(rightDot);
+      else     nixieDisplay.disableSegment(rightDot);
+    }
+
+    nixieDisplay.updateDisplay();
+    server.send(200, "text/plain", on ? "ON" : "OFF");
   } else {
     server.send(400, "text/plain", "Bad Request");
   }
@@ -200,6 +243,7 @@ void initWebServer() {
   server.on("/debug", handleDebug);
   server.on("/toggle", handleToggle);
   server.on("/setnumber", handleSetNumber);
+  server.on("/toggleDot", handleToggleDot);
   server.on("/autoupdate", handleAutoUpdate);
   
   server.begin();
