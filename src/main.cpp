@@ -66,7 +66,7 @@ void loop() {
         bool currButton3 = isButtonPressed(BUTTON3_PIN);
 
         if (currButton1 && !prevButton1) {
-            triggerSensorDisplay();
+            triggerTempHumiDisplay();
         }
         if (currButton3 && !prevButton3) {
             triggerSlotMachine();
