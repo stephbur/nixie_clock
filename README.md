@@ -22,12 +22,6 @@ Install PlatformIO either:
 - As a VS Code extension (recommended):  
   https://platformio.org/install/ide?install=vscode
 
-- Or via pip (CLI only):
-
-```bash
-pip install platformio
-```
-
 ---
 
 ## ⚙️ Configuration Overview
@@ -38,17 +32,12 @@ This file defines the build environment, board type, upload method, and compiler
 
 ```ini
 [env:seeed_xiao_esp32c6]
-platform = espressif32
-board = seeed_xiao_esp32c6
 framework = arduino
+board = seeed_xiao_esp32c6
 
 monitor_speed = 115200
 upload_speed = 921600
 
-build_flags =
-    -DCORE_DEBUG_LEVEL=3
-    -DLED_BUILTIN=21
-    -DOTA_ENABLED
 
 build_flags = 
     -DUSE_LOCAL_CREDENTIALS
@@ -88,7 +77,7 @@ cp include/credentials.h include/credentials_local.h
 static const char* WIFI_SSID = "YourWiFiSSID";
 static const char* WIFI_PASSWORD = "YourWiFiPassword";
 
-#define MQTT_BROKER      "xxx.xxx.xxx.xxx"
+#define MQTT_BROKER      "192.168.xxx.xxx"
 #define MQTT_PORT        1883
 #define MQTT_USER        "your_user"
 #define MQTT_PASSWORD    "your_password"
@@ -102,48 +91,89 @@ static const char* WIFI_PASSWORD = "YourWiFiPassword";
 
 ---
 
+
 ## 🔌 Upload Options
 
-### Option 1: USB Upload (Wired)
+This project supports **two upload methods** for the ESP32-based Nixie Clock:
 
-1. Connect the device via USB  
-2. Upload firmware:
+- USB (Serial)
+- OTA (Over-the-Air)
 
-```bash
-pio run --target upload
-```
-
-> You may also use the “Upload” button in VS Code.
+Only **one** upload method should be active at a time in your `platformio.ini`.
 
 ---
 
-### Option 2: OTA Upload (Wireless)
+### How to Choose an Upload Method
 
-OTA must be enabled at compile time (`-DOTA_ENABLED`) and the device must be running and reachable on your network.
+In your `platformio.ini`, you'll find this section:
 
-Upload via:
+```ini
+; ========================
+; Choose upload method below
+; Uncomment ONLY ONE of the following blocks
+; ========================
 
-```bash
-pio run --target upload --upload-port YOUR_DEVICE_IP
+; --- Option 1: USB/Serial upload ---
+; upload_protocol = esptool
+; monitor_port = /dev/ttyACM0
+; upload_port = /dev/ttyACM0
+
+; --- Option 2: OTA upload over network ---
+; Replace IP below with your device's actual IP in a separate local override file (see below)
+upload_protocol = espota
+upload_port = 192.168.xxx.xxx
 ```
 
-Example:
+**Instructions:**
 
-```bash
-pio run -t upload --upload-port 192.168.xxx.xxx
-```
+- To use **USB upload**, uncomment the USB block **and comment out the OTA block**.
+- To use **OTA upload**, comment out the USB block and **ensure your device's IP is set in `upload_port`**.
 
 ---
+
+### 🧪 First-Time Setup Requires USB
+
+You **must upload the firmware via USB** the first time to flash the Wifi credentials:
+
+1. Connect your board via USB.
+2. Uncomment the USB block:
+
+```ini
+upload_protocol = esptool
+monitor_port = /dev/ttyACM0
+upload_port = /dev/ttyACM0
+```
+
+3. Click the **"Upload"** button in VS Code to flash the firmware.
+
+---
+
+### 📡 Switching to OTA
+
+Once OTA is enabled (in firmware), switch to the OTA block:
+
+```ini
+upload_protocol = espota
+upload_port = 192.168.xxx.xxx  ; Replace with your device's IP
+```
+
+> 💡 Tip: Use your router or mDNS to discover the device’s IP. Alternatively open a serial monitor with baudrate 115200 to see the ip.
+
+---
+
+### 🔍 Finding Your Device’s Serial Port
+
+To determine the correct port when using USB:
+
+- **Linux**: run `dmesg | grep tty` after plugging in
+- **Windows**: open Device Manager → Ports (COM & LPT)
+- **macOS**: run `ls /dev/cu.*` and find something like `/dev/cu.usbmodemXXXX`
+
+
 
 ## 🌐 Web Interface
 
-Once connected to Wi-Fi, open your browser to:
-
-```
-http://192.168.xxx.xxx/
-```
-
-You will see:
+Once connected to Wi-Fi, open your browser to see:
 
 - Status and sensor readings  
 - Debug tools (GPIO toggling, display testing)  
@@ -153,11 +183,21 @@ You will see:
 
 ## 📡 MQTT Topics
 
-When enabled, the firmware communicates via these topics:
+When enabled, the software communicates via these topics:
 
+- Push a number to be displayed on the clock: `nixieclock/command`
 - Publish status: `nixieclock/status`
-- Receive commands: `nixieclock/command`
+
+To display a number execute the following on the mosquitto server
+
+```
+mosquitto_pub -h localhost -u mosquitto_user -P mosquitto_password -t "nixieclock/command" -m "123456"
+```
+
+To test the reception of the the published sensor data
+```
+mosquitto_sub -h localhost -p 1883 -u "mosquitto_user" -P "mosquitto_password" -t "nixieclock/status" -v
+```
 
 ---
 
----
