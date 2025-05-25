@@ -3,6 +3,7 @@
 #include "nixiedisplay.h"
 #include "mqtt.h"
 #include "ntp.h"
+#include "webserver.h"
 
 static NixieDisplay* nixie = nullptr;
 static int lastTempHumiDisplayMinute = -1;
@@ -102,7 +103,8 @@ void updateDisplayManager() {
     }
 
     // Default time display (only when no override is active)
-    if (overrideState == OverrideState::None) {
+    // clockUpdateEnabled is set by the debug interface on the web server.
+    if (overrideState == OverrideState::None && clockUpdateEnabled) {
         uint32_t compactTime = h * 10000 + m * 100 + s;
         nixie->showNumber(compactTime);
 

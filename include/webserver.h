@@ -17,4 +17,7 @@ void handleDebug();   // Debug page with IO toggling, button status, and number 
 void handleToggle();
 void handleSetNumber();
 
+extern bool clockUpdateEnabled;
+
+
 #endif // WEBSERVER_H
