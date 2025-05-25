@@ -51,29 +51,23 @@ void loop() {
     ArduinoOTA.handle();
     handleWebRequests();
     updateButtons();
-    static unsigned long lastTimeCheck = 0;
-    static bool prevButton1 = isButtonPressed(BUTTON1_PIN);
-    static bool prevButton3 = isButtonPressed(BUTTON3_PIN);
-    unsigned long now = millis();
 
-    if (now - lastTimeCheck >= 500) {
-        lastTimeCheck = now;
-
-        updateDisplayManager();
-
-        bool currButton1 = isButtonPressed(BUTTON1_PIN);
-        bool currButton3 = isButtonPressed(BUTTON3_PIN);
-
-        if (currButton1 && !prevButton1) {
-            triggerTempHumiDisplay();
-        }
-        if (currButton3 && !prevButton3) {
-            triggerSlotMachine();
-        }
-
-        prevButton1 = currButton1;
-        prevButton3 = currButton3;
+    if (wasButtonJustPressed(BUTTON_1)) {
+        Serial.println("Button 1 just pressed!");
+        triggerTempHumiDisplay();
     }
 
-    delay(10);
+    if (wasButtonJustPressed(BUTTON_3)) {
+        Serial.println("Button 3 just pressed!");
+        triggerSlotMachine();
+    }
+
+    static unsigned long lastTimeCheck = 0;
+    unsigned long now = millis();
+    if (now - lastTimeCheck >= 500) {
+        lastTimeCheck = now;
+        updateDisplayManager();  // periodic logic here
+    }
+
+    delay(10);  // debounce delay is separate; you can lower this too
 }
