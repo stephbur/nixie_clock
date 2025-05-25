@@ -51,26 +51,20 @@ void loop() {
     handleWebRequests();
     updateButtons();
     static unsigned long lastTimeCheck = 0;
-    static bool prevButton1       = isButtonPressed(BUTTON1_PIN);
-    static bool prevButton3       = isButtonPressed(BUTTON3_PIN);
-    unsigned long now             = millis();
+    static bool prevButton1 = isButtonPressed(BUTTON1_PIN);
+    static bool prevButton3 = isButtonPressed(BUTTON3_PIN);
+    unsigned long now = millis();
 
-    if (now - lastTimeCheck >= 1000) {
+    if (now - lastTimeCheck >= 500) {
         lastTimeCheck = now;
 
         String currentTime = getFormattedTime();
         Serial.println("Current time: " + currentTime);
+        updateDisplayManager(currentTime);
 
-        // Only run scheduled updates if auto‐update is enabled
-        if (clockUpdateEnabled) {
-            updateDisplayManager(currentTime);
-        }
-
-        // Read buttons
         bool currButton1 = isButtonPressed(BUTTON1_PIN);
         bool currButton3 = isButtonPressed(BUTTON3_PIN);
 
-        // Manual triggers always allowed
         if (currButton1 && !prevButton1) {
             triggerSensorDisplay();
         }
@@ -80,23 +74,6 @@ void loop() {
 
         prevButton1 = currButton1;
         prevButton3 = currButton3;
-
-        // Show the time on the nixie only if no override is active and auto-update is on
-        if (clockUpdateEnabled && !isDisplayOverrideActive()) {
-            int h, m, s;
-            if (sscanf(currentTime.c_str(), "%d:%d:%d", &h, &m, &s) == 3) {
-                uint32_t compactTime = h * 10000 + m * 100 + s;
-                nixieDisplay.showNumber(compactTime);
-                if (s % 2 == 0) {
-                  nixieDisplay.disableSegment(leftDot);
-                  nixieDisplay.disableSegment(rightDot);
-                } else {
-                  nixieDisplay.enableSegment(leftDot);
-                  nixieDisplay.enableSegment(rightDot);
-                }
-                nixieDisplay.updateDisplay();
-            }
-        }
     }
 
     delay(10);

@@ -20,18 +20,31 @@ void triggerSensorDisplay() {
     overridePhase = 1;
 
     SensorData data = readSensors();
-    int temp = round(data.temperatureAHT);  // e.g. 23
-    int humi = round(data.humidity);        // e.g. 56
+    int temp = round(data.temperatureAHT);
+    int humi = round(data.humidity);
 
     nixie->disableAllSegments();
-
-    nixie->enableSegment(hourTens[temp/10]);
-    nixie->enableSegment(hourUnits[temp%10]);
-    nixie->enableSegment(secondTens[humi/10]);
-    nixie->enableSegment(secondUnits[humi%10]);
+    nixie->enableSegment(hourTens[temp / 10]);
+    nixie->enableSegment(hourUnits[temp % 10]);
+    nixie->enableSegment(secondTens[humi / 10]);
+    nixie->enableSegment(secondUnits[humi % 10]);
     nixie->updateDisplay();
 }
 
+void triggerPressureDisplay() {
+    if (!nixie) return;
+
+    SensorData data = readSensors();
+    int pres = round(data.pressure); // e.g. 1013
+    int hi = pres / 100;
+    int lo = pres % 100;
+
+    nixie->disableAllSegments();
+    nixie->enableSegment(minuteUnits[hi % 10]);
+    nixie->enableSegment(secondTens[lo / 10]);
+    nixie->enableSegment(secondUnits[lo % 10]);
+    nixie->updateDisplay();
+}
 
 void triggerSlotMachine() {
     if (!nixie || runningSlotMachine) return;
@@ -54,27 +67,34 @@ void updateDisplayManager(const String& currentTime) {
         triggerSensorDisplay();
     }
 
+    // Phase 1: temperature + humidity → Phase 2: pressure
     if (overridePhase == 1 && now - overrideStart >= 3000) {
         overridePhase = 2;
-        SensorData data = readSensors();
-        int pres   = round(data.pressure);     // e.g. 1013
-        int hi     = pres / 100;               // e.g. 10
-        int lo     = pres % 100;               // e.g. 13
-
-        nixie->disableAllSegments();
-        nixie->enableSegment(minuteUnits[hi%10]);
-        nixie->enableSegment(secondTens[lo/10]);
-        nixie->enableSegment(secondUnits[lo%10]);
-        nixie->updateDisplay();
-
+        triggerPressureDisplay();
     } else if (overridePhase == 2 && now - overrideStart >= 6000) {
-            overridePhase = 0;
+        overridePhase = 0;
     }
 
     // Scheduled slot machine effect
     if (m % 5 == 0 && s == 0 && m != lastSlotMachineMinute) {
         lastSlotMachineMinute = m;
         triggerSlotMachine();
+    }
+
+    // Default time display (if no overrides active)
+    if (!isDisplayOverrideActive()) {
+        uint32_t compactTime = h * 10000 + m * 100 + s;
+        nixie->showNumber(compactTime);
+
+        if (s % 2 == 0) {
+            nixie->disableSegment(leftDot);
+            nixie->disableSegment(rightDot);
+        } else {
+            nixie->enableSegment(leftDot);
+            nixie->enableSegment(rightDot);
+        }
+
+        nixie->updateDisplay();
     }
 }
 
