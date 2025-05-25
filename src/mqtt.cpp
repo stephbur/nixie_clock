@@ -56,7 +56,7 @@ bool mqttReconnect() {
     }
 }
 
-void mqttInit() {
+void initMQTT() {
     Serial.println("Initializing MQTT...");
     mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
     mqttClient.setCallback(mqttCallback);

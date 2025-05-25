@@ -2,6 +2,7 @@
 #include "sensors.h"
 #include "nixiedisplay.h"
 #include "mqtt.h"
+#include "ntp.h"
 
 static NixieDisplay* nixie = nullptr;
 static int lastTempHumiDisplayMinute = -1;
@@ -68,12 +69,13 @@ void triggerSlotMachine() {
     overrideState = OverrideState::None;
 }
 
-void updateDisplayManager(const String& currentTime) {
+void updateDisplayManager() {
     mqttLoop();
     if (isMqttDisplayOverrideActive()) return;
 
     if (!nixie) return;
 
+    String currentTime = getFormattedTime();
     int h, m, s;
     if (sscanf(currentTime.c_str(), "%d:%d:%d", &h, &m, &s) != 3) return;
 

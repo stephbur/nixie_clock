@@ -39,13 +39,12 @@ void setup() {
   
   nixieDisplay.begin();
   displayManagerInit(nixieDisplay);
-
   
   initButtons();
   
   initWebServer();
 
-  mqttInit();
+  initMQTT();
 }
 
 void loop() {
@@ -60,9 +59,7 @@ void loop() {
     if (now - lastTimeCheck >= 500) {
         lastTimeCheck = now;
 
-        String currentTime = getFormattedTime();
-        // Serial.println("Current time: " + currentTime);
-        updateDisplayManager(currentTime);
+        updateDisplayManager();
 
         bool currButton1 = isButtonPressed(BUTTON1_PIN);
         bool currButton3 = isButtonPressed(BUTTON3_PIN);

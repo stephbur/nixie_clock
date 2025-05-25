@@ -6,7 +6,7 @@
 class NixieDisplay;
 
 void displayManagerInit(NixieDisplay& display);
-void updateDisplayManager(const String& currentTime);
+void updateDisplayManager();
 void triggerTempHumiDisplay();         // externally triggered (e.g. by time or button)
 void triggerSlotMachine();           // externally triggered (e.g. by time or button)
 
