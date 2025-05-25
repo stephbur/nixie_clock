@@ -3,21 +3,27 @@
 #include "nixiedisplay.h"
 
 static NixieDisplay* nixie = nullptr;
-static int lastSensorDisplayMinute = -1;
+static int lastTempHumiDisplayMinute = -1;
 static int lastSlotMachineMinute = -1;
 
+enum class OverrideState {
+    None,
+    TempHumiDisplay,
+    PressureDisplay,
+    SlotMachine
+};
+
+static OverrideState overrideState = OverrideState::None;
 static unsigned long overrideStart = 0;
-static int overridePhase = 0; // 0 = none, 1 = sensor display, 2 = pressure display
-static bool runningSlotMachine = false;
 
 void displayManagerInit(NixieDisplay& display) {
     nixie = &display;
 }
 
-void triggerSensorDisplay() {
+void triggerTempHumiDisplay() {
     if (!nixie) return;
     overrideStart = millis();
-    overridePhase = 1;
+    overrideState = OverrideState::TempHumiDisplay;
 
     SensorData data = readSensors();
     int temp = round(data.temperatureAHT);
@@ -33,6 +39,7 @@ void triggerSensorDisplay() {
 
 void triggerPressureDisplay() {
     if (!nixie) return;
+    overrideState = OverrideState::PressureDisplay;
 
     SensorData data = readSensors();
     int pres = round(data.pressure); // e.g. 1013
@@ -47,10 +54,13 @@ void triggerPressureDisplay() {
 }
 
 void triggerSlotMachine() {
-    if (!nixie || runningSlotMachine) return;
-    runningSlotMachine = true;
-    nixie->runSlotMachine();
-    runningSlotMachine = false;
+    if (!nixie || overrideState == OverrideState::SlotMachine) return;
+
+    overrideStart = millis();
+    overrideState = OverrideState::SlotMachine;
+
+    nixie->runSlotMachine(); 
+    overrideState = OverrideState::None;
 }
 
 void updateDisplayManager(const String& currentTime) {
@@ -62,17 +72,17 @@ void updateDisplayManager(const String& currentTime) {
     unsigned long now = millis();
 
     // Scheduled sensor display every 5 minutes + 1 (e.g. 06, 11, ...)
-    if (m % 5 == 1 && s == 0 && m != lastSensorDisplayMinute) {
-        lastSensorDisplayMinute = m;
-        triggerSensorDisplay();
+    if (m % 5 == 1 && s == 0 && m != lastTempHumiDisplayMinute) {
+        lastTempHumiDisplayMinute = m;
+        triggerTempHumiDisplay();
     }
-
-    // Phase 1: temperature + humidity → Phase 2: pressure
-    if (overridePhase == 1 && now - overrideStart >= 3000) {
-        overridePhase = 2;
+    // Override state transitions
+    // if it is displaying TempHumi and 3 seconds have passed, switch to PressureDisplay
+    if (overrideState == OverrideState::TempHumiDisplay && now - overrideStart >= 3000) {
         triggerPressureDisplay();
-    } else if (overridePhase == 2 && now - overrideStart >= 6000) {
-        overridePhase = 0;
+    // if it is displaying PressureDisplay and 6 seconds have passed, disable override
+    } else if (overrideState == OverrideState::PressureDisplay && now - overrideStart >= 6000) {
+        overrideState = OverrideState::None;
     }
 
     // Scheduled slot machine effect
@@ -81,8 +91,8 @@ void updateDisplayManager(const String& currentTime) {
         triggerSlotMachine();
     }
 
-    // Default time display (if no overrides active)
-    if (!isDisplayOverrideActive()) {
+    // Default time display (only when no override is active)
+    if (overrideState == OverrideState::None) {
         uint32_t compactTime = h * 10000 + m * 100 + s;
         nixie->showNumber(compactTime);
 
@@ -98,6 +108,3 @@ void updateDisplayManager(const String& currentTime) {
     }
 }
 
-bool isDisplayOverrideActive() {
-    return overridePhase != 0 || runningSlotMachine;
-}
