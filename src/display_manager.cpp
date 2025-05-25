@@ -1,6 +1,7 @@
 #include "display_manager.h"
 #include "sensors.h"
 #include "nixiedisplay.h"
+#include "mqtt.h"
 
 static NixieDisplay* nixie = nullptr;
 static int lastTempHumiDisplayMinute = -1;
@@ -26,6 +27,7 @@ void triggerTempHumiDisplay() {
     overrideState = OverrideState::TempHumiDisplay;
 
     SensorData data = readSensors();
+
     int temp = round(data.temperatureAHT);
     int humi = round(data.humidity);
 
@@ -35,6 +37,9 @@ void triggerTempHumiDisplay() {
     nixie->enableSegment(secondTens[humi / 10]);
     nixie->enableSegment(secondUnits[humi % 10]);
     nixie->updateDisplay();
+
+    mqttPublishStatus(data);
+
 }
 
 void triggerPressureDisplay() {
@@ -64,6 +69,9 @@ void triggerSlotMachine() {
 }
 
 void updateDisplayManager(const String& currentTime) {
+    mqttLoop();
+    if (isMqttDisplayOverrideActive()) return;
+
     if (!nixie) return;
 
     int h, m, s;

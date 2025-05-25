@@ -13,7 +13,7 @@
 #include <WiFi.h>
 #include <ArduinoOTA.h>
 #include "display_manager.h"
-
+#include "mqtt.h"
 
 NixieDisplay nixieDisplay;
 extern bool clockUpdateEnabled;
@@ -44,6 +44,8 @@ void setup() {
   initButtons();
   
   initWebServer();
+
+  mqttInit();
 }
 
 void loop() {
@@ -59,7 +61,7 @@ void loop() {
         lastTimeCheck = now;
 
         String currentTime = getFormattedTime();
-        Serial.println("Current time: " + currentTime);
+        // Serial.println("Current time: " + currentTime);
         updateDisplayManager(currentTime);
 
         bool currButton1 = isButtonPressed(BUTTON1_PIN);
