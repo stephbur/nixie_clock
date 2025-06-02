@@ -48,6 +48,7 @@ bool mqttReconnect() {
         mqttClient.subscribe(MQTT_TOPIC_COMMAND);
         Serial.print("Subscribed to command topic: ");
         Serial.println(MQTT_TOPIC_COMMAND);
+        mqttPublishDiscovery();
         return true;
     } else {
         Serial.print("MQTT connection failed. rc=");
@@ -56,10 +57,53 @@ bool mqttReconnect() {
     }
 }
 
+void mqttPublishDiscovery() {
+    const char* deviceId = "nixie_sensor_node";
+    const char* deviceName = "Nixie Clock";
+
+    struct {
+        const char* name;
+        const char* id;
+        const char* topic;
+        const char* unit;
+        const char* device_class;
+        const char* state_class;
+    } sensors[] = {
+        { "Nixie Temperature", "nixie_temp", "sensor/nixie/temp", "°C", "temperature", "measurement" },
+        { "Nixie Humidity",    "nixie_humi", "sensor/nixie/humi", "%", "humidity", "measurement" },
+        { "Nixie Pressure",    "nixie_pressure", "sensor/nixie/pressure", "hPa", "pressure", "measurement" }
+    };
+
+    for (auto& s : sensors) {
+        String configTopic = "homeassistant/sensor/" + String(s.id) + "/config";
+
+        String payload = "{";
+        payload += "\"name\":\"" + String(s.name) + "\",";
+        payload += "\"state_topic\":\"" + String(s.topic) + "\",";
+        payload += "\"unit_of_measurement\":\"" + String(s.unit) + "\",";
+        payload += "\"device_class\":\"" + String(s.device_class) + "\",";
+        payload += "\"state_class\":\"" + String(s.state_class) + "\",";
+        payload += "\"value_template\":\"{{ value | float }}\",";
+        payload += "\"unique_id\":\"" + String(s.id) + "\",";
+        payload += "\"device\":{";
+        payload +=   "\"identifiers\":[\"" + String(deviceId) + "\"],";
+        payload +=   "\"name\":\"" + String(deviceName) + "\",";
+        payload +=   "\"manufacturer\":\"Custom\",";
+        payload +=   "\"model\":\"Nixie MQTT Node\"";
+        payload += "}";
+        payload += "}";
+
+        Serial.println("Publishing discovery config to " + configTopic);
+        mqttClient.publish(configTopic.c_str(), payload.c_str(), true);
+    }
+}
+
+
 void initMQTT() {
     Serial.println("Initializing MQTT...");
     mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
     mqttClient.setCallback(mqttCallback);
+    mqttPublishDiscovery();
 }
 
 void mqttLoop() {
@@ -78,17 +122,13 @@ void mqttLoop() {
 }
 
 void mqttPublishStatus(const SensorData& data) {
-    String currentTime = getFormattedTime();
-    String payload = "{\"time\":\"" + currentTime + "\","
-                     "\"t\":" + String(data.temperatureAHT, 2) + ","
-                     "\"rh\":" + String(data.humidity, 2) + ","
-                     "\"pressure\":" + String(data.pressure, 2) + "}";
-    Serial.print("Publishing MQTT status to topic ");
-    Serial.print(MQTT_TOPIC_STATUS);
-    Serial.print(": ");
-    Serial.println(payload);
+    mqttClient.publish("sensor/nixie/temp", String(data.temperatureAHT, 2).c_str(), true);
+    mqttClient.publish("sensor/nixie/humi", String(data.humidity, 2).c_str(), true);
+    mqttClient.publish("sensor/nixie/pressure", String(data.pressure, 2).c_str(), true);
 
-    mqttClient.publish(MQTT_TOPIC_STATUS, payload.c_str());
+    Serial.println("Published MQTT sensor/nixie/temp: " + String(data.temperatureAHT, 2));
+    Serial.println("Published MQTT sensor/nixie/humi: " + String(data.humidity, 2));
+    Serial.println("Published MQTT sensor/nixie/pressure: " + String(data.pressure, 2));
 }
 
 void mqttTriggerDisplayOverride(uint32_t number, uint32_t duration) {
