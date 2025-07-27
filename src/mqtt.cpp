@@ -146,12 +146,4 @@ bool isMqttDisplayOverrideActive() {
     return millis() < displayOverrideUntil;
 }
 
-#else
-
-void mqttInit() {}
-void mqttLoop() {}
-void mqttPublishStatus(const String&, const String&) {}
-void mqttTriggerDisplayOverride(uint32_t, uint32_t) {}
-bool isMqttDisplayOverrideActive() { return false; }
-
-#endif
+#endif // MQTT_ENABLED
