@@ -1,10 +1,13 @@
+#include <WiFi.h>
+#include <WebServer.h>
+#include "nixiewebserver.h" 
 #include "config.h"
 #include "buttons.h"
 #include "ntp.h"
 #include "sensors.h"
 #include "nixiedisplay.h"
-#include <WiFi.h>
-#include <WebServer.h>
+
+
 
 WebServer server(80);
 
