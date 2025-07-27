@@ -19,32 +19,40 @@ NixieDisplay nixieDisplay;
 extern bool clockUpdateEnabled;
 
 void setup() {
-  Serial.begin(115200);
-  
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Connecting to WiFi");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("\nWiFi connected. IP address: " + WiFi.localIP().toString());
-  
-  initOTA();
-  
-  initTime();
-  
-  if (!initSensors()) {
-    Serial.println("Sensor initialization failed!");
-  }
-  
-  nixieDisplay.begin();
-  displayManagerInit(nixieDisplay);
-  
-  initButtons();
-  
-  initWebServer();
+    Serial.begin(115200);
 
-  initMQTT();
+    nixieDisplay.begin();                // Initialize nixie display hardware
+    displayManagerInit(nixieDisplay);    // Pass nixieDisplay to display manager
+
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    Serial.print("Connecting to WiFi");
+
+    // Blink 88:88:88 while waiting for WiFi
+    while (WiFi.status() != WL_CONNECTED) {
+        nixieDisplay.showNumber(888888);
+        nixieDisplay.updateDisplay();
+        delay(500);
+
+        nixieDisplay.disableAllSegments();
+        nixieDisplay.updateDisplay();
+        delay(500);
+
+        Serial.print(".");
+    }
+
+    Serial.println("\nWiFi connected. IP address: " + WiFi.localIP().toString());
+    showIpChunks(WiFi.localIP());
+
+    initOTA();
+    initTime();
+
+    if (!initSensors()) {
+        Serial.println("Sensor initialization failed!");
+    }
+
+    initButtons();
+    initWebServer();
+    initMQTT();
 }
 
 void loop() {

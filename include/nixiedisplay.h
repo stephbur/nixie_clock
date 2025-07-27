@@ -24,15 +24,9 @@ class NixieDisplay {
     void updateDisplay();
     void runSlotMachine();
     void runSlotMachineWavy();
-    // Test function: display a 6-digit number (e.g. HHMMSS)
     void showNumber(uint32_t number);
-    // Test function: force display of digit "5" on all tubes.
     void showAll5();
   private:
-    // Frame of 8 bytes (64 bits) for the HV5622 chain.
-    void slowShiftOut(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder, byte value);
-
-    // In your working project, a 0 means OFF and a 1 means ON.
     byte _frame[8];
 };
 

@@ -70,6 +70,28 @@ void triggerSlotMachine() {
     overrideState = OverrideState::None;
 }
 
+void showIpChunks(const IPAddress& ip) {
+    if (!nixie) return;
+    char ipStr[13] = {0};
+    snprintf(ipStr, sizeof(ipStr), "%03d%03d%03d%03d", ip[0], ip[1], ip[2], ip[3]);
+
+    auto display6digits = [&](const char* digits) {
+        nixie->disableAllSegments();
+        nixie->enableSegment(hourTens[digits[0] - '0']);
+        nixie->enableSegment(hourUnits[digits[1] - '0']);
+        nixie->enableSegment(minuteTens[digits[2] - '0']);
+        nixie->enableSegment(minuteUnits[digits[3] - '0']);
+        nixie->enableSegment(secondTens[digits[4] - '0']);
+        nixie->enableSegment(secondUnits[digits[5] - '0']);
+        nixie->updateDisplay();
+    };
+
+    display6digits(ipStr);
+    delay(2000);
+    display6digits(ipStr + 6);
+    delay(2000);
+}
+
 void updateDisplayManager() {
     mqttLoop();
     if (isMqttDisplayOverrideActive()) return;
