@@ -169,6 +169,9 @@ To determine the correct port when using USB:
 - **Windows**: open Device Manager → Ports (COM & LPT)
 - **macOS**: run `ls /dev/cu.*` and find something like `/dev/cu.usbmodemXXXX`
 
+### 🕒 Startup Behavior
+
+On startup, the Nixie clock blinks `88:88:88` continuously until a Wi-Fi connection is successfully established. Once connected, the display briefly shows the device’s IP address split into two 6-digit chunks (e.g. `192168` followed by `001122` for IP `192.168.1.122`). After this, normal timekeeping and sensor-driven behavior resumes.
 
 
 ## 🌐 Web Interface
